@@ -97,11 +97,15 @@ namespace BudgetCalculator
 				var packageWorksheet = package.Workbook.Worksheets[date.Year.ToString()];
 				var packageColumn = date.Month + 1;
 				var packageLastRow = packageWorksheet.Dimension.Rows;
-				for(int n = configuration.StartRow, n < packageLastRow, n++)
+				bool newCategory = true;
+				for (int n = configuration.StartRow; n < packageLastRow; n++)
 				{
-
+					if(packageWorksheet.Cells[n, 0].Value.Equals(selectedName))
+					{
+						//Figure out how to add to a list of models first and then add their values into the excel file once the import is finished 
+						packageWorksheet.Cells[n, packageColumn].Value += decimal.Parse(value.Replace(".", ""));
+					}
 				}
-				bool newCategory = false;
 
 
 				
