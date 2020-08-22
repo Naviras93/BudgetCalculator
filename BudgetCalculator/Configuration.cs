@@ -8,6 +8,9 @@ namespace BudgetCalculator
 {
 	public class Configuration
 	{
+		public int StartRow { get; set; }
+		public int Column { get; set; }
+		public string ImportPathName { get; set; }
 		public List<string> ExcelFilesToRead { get; set; }
 		public List<ExportCategory> ExportCategories { get; set; }
 		public string CategoryOthersName { get; set; }
