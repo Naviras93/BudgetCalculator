@@ -9,48 +9,106 @@ using System.Threading.Tasks;
 
 namespace BudgetCalculator
 {
-	class Program
+	public class Program
 	{
+		public static Configuration configuration;
+
 		static void Main(string[] args)
 		{
 			var jsonString = File.ReadAllText(Directory.GetCurrentDirectory() + "\\configuration.json");
-			var configuration = JsonConvert.DeserializeObject<Configuration>(jsonString);
-
-
+			configuration = JsonConvert.DeserializeObject<Configuration>(jsonString);
+			
 			ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
-			using (var package = new ExcelPackage())
+			var package = new ExcelPackage();
+			
+			string exportFile = configuration.ExportPathName + configuration.ExportFileName + ".xlsx";
+			if (File.Exists(exportFile))
 			{
-				foreach(var excelFileSearch in configuration.ExcelFilesToRead)
+				package = new ExcelPackage(new FileInfo(exportFile));
+				//Check if the last page is the same or higher than last year value. If its not then add more pages.
+			}
+			else
+			{
+				// THIS IS WHERE THE HEADER IS MADE. Create duplicates for several years (from 2019 to 2050?)
+			}
+			foreach (var excelFileSearch in configuration.ExcelFilesToRead)
+			{
+				var fullFileName = $"{excelFileSearch}.xlsx";
+				var file = new ExcelPackage();
+
+				try
 				{
-					var fullFileName = $"{excelFileSearch}.xlsx";
-					var file = new ExcelPackage();
+					FileInfo fileInfo = new FileInfo($"{configuration.ImportPathName}{fullFileName}");
+					file = new ExcelPackage(fileInfo);
 
-					try
-					{
-						FileInfo fileInfo = new FileInfo($"{configuration.ImportPathName}{fullFileName}");
-						file = new ExcelPackage(fileInfo);
-					}
-					catch
-					{
-						Console.WriteLine($"ERROR: Could not find {fullFileName} in {configuration.ImportPathName}");
-						continue;
-					}
+					CategorizeFile(package, file);
 
-					ExcelWorksheet worksheet = file.Workbook.Worksheets[0];
-					string value = "";
-					int row = configuration.StartRow;
-					do
-					{
-						value = worksheet.Cells[row, configuration.Column].Value?.ToString();
-						Console.WriteLine(value);
-						row++;
-					}
-					while (!string.IsNullOrEmpty(value));
+				}
+				catch(Exception e)
+				{
+					Console.WriteLine(e.Message);
+					continue;
 				}
 			}
+			
 
 			Console.ReadKey();
+		}
+
+		private static void CategorizeFile(ExcelPackage package, ExcelPackage file)
+		{
+			ExcelWorksheet worksheet = file.Workbook.Worksheets[0];
+			string value = "";
+			var endRow = worksheet.Dimension.End.Row;
+			for (int i = configuration.StartRow; i < endRow; i++)
+			{
+				value = worksheet.Cells[i, configuration.ValueColumn].Value?.ToString();
+				if (string.IsNullOrEmpty(value))
+					break;
+				var purchaseSourceName = worksheet.Cells[i, configuration.NameColumn].Value?.ToString();
+				string selectedName = "";
+				foreach(var c in configuration.ExportCategories)
+				{
+					foreach(var name in c.PurchaseSourceNames)
+					{
+						if (name.Equals(purchaseSourceName))
+						{
+							selectedName = c.CategoryName;
+							break;
+						}
+					}
+
+					if (!string.IsNullOrEmpty(selectedName))
+					{
+						break;
+					}
+				}
+
+				if (string.IsNullOrEmpty(selectedName))
+				{
+					selectedName = configuration.CategoryOthersName;
+
+					if(configuration.ListUpPurchaseSourcesInOthers)
+						Console.WriteLine($"Added {purchaseSourceName} to {configuration.CategoryOthersName}");
+				}
+
+				var date = Convert.ToDateTime(worksheet.Cells[i, configuration.DateColumn].Value?.ToString());
+				var packageWorksheet = package.Workbook.Worksheets[date.Year.ToString()];
+				var packageColumn = date.Month + 1;
+				var packageLastRow = packageWorksheet.Dimension.Rows;
+				for(int n = configuration.StartRow, n < packageLastRow, n++)
+				{
+
+				}
+				bool newCategory = false;
+
+
+				
+
+
+				Console.WriteLine(value);
+			}
 		}
 	}
 }
