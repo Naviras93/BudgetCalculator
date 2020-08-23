@@ -122,11 +122,6 @@ namespace BudgetCalculator
 					selectedName = "";
 					foreach (var name in c.PurchaseSourceNames)
 					{
-						//if (purchaseSourceName.Contains(name))
-						//{
-						//	selectedName = c.CategoryName;
-						//	break;
-						//}
 						if(culture.CompareInfo.IndexOf(purchaseSourceName, name, CompareOptions.IgnoreCase) >= 0)
 						{
 							selectedName = c.CategoryName;
@@ -150,7 +145,7 @@ namespace BudgetCalculator
 
 				var date = Convert.ToDateTime(worksheet.Cells[i, configuration.DateColumn].Text);
 				var dateYear = date.Year.ToString();
-				var packageColumn = date.Month;
+				var packageColumn = date.Month + 1;
 				var model = models.Where(x => x.Year.Equals(dateYear) && x.Column == packageColumn && x.Category.Equals(selectedName)).FirstOrDefault();
 				if(model == null)
 				{
