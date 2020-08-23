@@ -11,6 +11,7 @@ namespace BudgetCalculator
 		public string Year { get; set; }
 		public int Column { get; set; }
 		public string Category { get; set; }
-		public string Amounnt { get; set; }
+		public decimal Amount { get; set; }
+		public bool NewCategory { get; set; }
 	}
 }

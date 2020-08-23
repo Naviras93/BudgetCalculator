@@ -12,26 +12,31 @@ namespace BudgetCalculator
 	public class Program
 	{
 		public static Configuration configuration;
+		public static string exportFile;
+		public static bool newFile;
 
 		static void Main(string[] args)
 		{
-			var jsonString = File.ReadAllText(Directory.GetCurrentDirectory() + "\\configuration.json");
+			var jsonString = File.ReadAllText(Directory.GetCurrentDirectory() + "\\configuration.json", System.Text.Encoding.GetEncoding(1252));
 			configuration = JsonConvert.DeserializeObject<Configuration>(jsonString);
 			
 			ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
 			var package = new ExcelPackage();
 			
-			string exportFile = configuration.ExportPathName + configuration.ExportFileName + ".xlsx";
+			exportFile = configuration.ExportPathName + configuration.ExportFileName + ".xlsx";
 			if (File.Exists(exportFile))
 			{
+				newFile = false;
 				package = new ExcelPackage(new FileInfo(exportFile));
 				//Check if the last page is the same or higher than last year value. If its not then add more pages.
 			}
 			else
 			{
+				newFile = true;
 				// THIS IS WHERE THE HEADER IS MADE. Create duplicates for several years (from 2019 to 2050?)
 			}
+			List<Model> models = new List<Model>();
 			foreach (var excelFileSearch in configuration.ExcelFilesToRead)
 			{
 				var fullFileName = $"{excelFileSearch}.xlsx";
@@ -42,7 +47,8 @@ namespace BudgetCalculator
 					FileInfo fileInfo = new FileInfo($"{configuration.ImportPathName}{fullFileName}");
 					file = new ExcelPackage(fileInfo);
 
-					CategorizeFile(package, file);
+					FillModel(file, models);
+					CreateFile(package, models);
 
 				}
 				catch(Exception e)
@@ -56,8 +62,9 @@ namespace BudgetCalculator
 			Console.ReadKey();
 		}
 
-		private static void CategorizeFile(ExcelPackage package, ExcelPackage file)
+		private static void FillModel(ExcelPackage file, List<Model> models)
 		{
+			//Go trough each
 			ExcelWorksheet worksheet = file.Workbook.Worksheets[0];
 			string value = "";
 			var endRow = worksheet.Dimension.End.Row;
@@ -72,7 +79,7 @@ namespace BudgetCalculator
 				{
 					foreach(var name in c.PurchaseSourceNames)
 					{
-						if (name.Equals(purchaseSourceName))
+						if (purchaseSourceName.Contains(name))
 						{
 							selectedName = c.CategoryName;
 							break;
@@ -94,25 +101,71 @@ namespace BudgetCalculator
 				}
 
 				var date = Convert.ToDateTime(worksheet.Cells[i, configuration.DateColumn].Value?.ToString());
-				var packageWorksheet = package.Workbook.Worksheets[date.Year.ToString()];
+				var dateYear = date.Year.ToString();
 				var packageColumn = date.Month + 1;
-				var packageLastRow = packageWorksheet.Dimension.Rows;
-				bool newCategory = true;
-				for (int n = configuration.StartRow; n < packageLastRow; n++)
-				{
-					if(packageWorksheet.Cells[n, 0].Value.Equals(selectedName))
-					{
-						//Figure out how to add to a list of models first and then add their values into the excel file once the import is finished 
-						packageWorksheet.Cells[n, packageColumn].Value += decimal.Parse(value.Replace(".", ""));
-					}
-				}
-
-
+				//bool newCategory = true;
 				
+					
+				//Figure out how to add to a list of models first and then add their values into the excel file once the import is finished
+				var model = models.Where(x => x.Year.Equals(dateYear) && x.Column == packageColumn && x.Category.Equals(selectedName)).FirstOrDefault();
+				if(model == null)
+				{
+					model = new Model
+					{
+						Category = selectedName,
+						Column = packageColumn,
+						Year = dateYear,
+						Amount = decimal.Parse(value.Replace(".", "")),
+					};
+					models.Add(model);
+				}
+				else
+					model.Amount += decimal.Parse(value.Replace(".", ""));
 
-
-				Console.WriteLine(value);
+				//packageWorksheet.Cells[n, packageColumn].Value += decimal.Parse(value.Replace(".", ""));
+					
+				
 			}
 		}
+
+		private static void CreateFile(ExcelPackage package, List<Model> models)
+		{
+			foreach(var model in models)
+			{
+				bool newCategory = true;
+				var excelWorksheet = package.Workbook.Worksheets[model.Year];
+				int lastRow = 1;
+				if (excelWorksheet == null)
+				{
+					excelWorksheet = package.Workbook.Worksheets.Add(model.Year);
+				}
+				else
+				{
+					lastRow = excelWorksheet.Dimension.Rows;
+				}
+
+				for (int i = 1; i < lastRow; i++)
+				{
+					if (excelWorksheet.Cells[i, 1].Equals(model.Category))
+					{
+						excelWorksheet.Cells[i, model.Column].Value = model.Amount;
+						newCategory = false;
+						break;
+					}
+				}
+				if (newCategory)
+				{
+					lastRow++;
+					excelWorksheet.Cells[lastRow, 1].Value = model.Category;
+					excelWorksheet.Cells[lastRow, model.Column].Value = model.Amount;
+				}
+			}
+
+			if (newFile)
+				package.SaveAs(new FileInfo(exportFile));
+			else
+				package.Save();
+		}
+
 	}
 }
