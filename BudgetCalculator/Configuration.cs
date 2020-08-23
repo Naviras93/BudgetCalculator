@@ -13,6 +13,7 @@ namespace BudgetCalculator
 		public int NameColumn { get; set; }
 		public int DateColumn { get; set; }
 		public int CoverYearsAhead { get; set; }
+		public List<string> Headers { get; set; }
 		public string ImportPathName { get; set; }
 		public List<string> ExcelFilesToRead { get; set; }
 		public List<ExportCategory> ExportCategories { get; set; }
