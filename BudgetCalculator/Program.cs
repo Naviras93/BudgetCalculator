@@ -27,7 +27,7 @@ namespace BudgetCalculator
 			var package = new ExcelPackage();
 			
 			exportFile = configuration.ExportPathName + configuration.ExportFileName + ".xlsx";
-			var earliestYear = DateTime.Now.Year + configuration.CoverYearsBehind;
+			var earliestYear = DateTime.Now.Year - configuration.CoverYearsBehind;
 			if (File.Exists(exportFile))
 			{
 				newFile = false;
@@ -74,7 +74,7 @@ namespace BudgetCalculator
 
 		private static void AddPages(ExcelPackage package, int untilYear)
 		{
-			for (int i = DateTime.Now.Year; i <= untilYear; i++)
+			for (int i = untilYear; i <= DateTime.Now.Year; i++)
 			{
 				if(package.Workbook.Worksheets[i.ToString()] == null)
 				{
@@ -90,12 +90,12 @@ namespace BudgetCalculator
 			int lastColumn = firstColumn;
 			foreach (var header in configuration.Headers)
 			{
-				sheet.Cells[1, lastColumn].Value = header;
+				sheet.Cells[2, lastColumn].Value = header;
 				lastColumn++;
 			}
 			if (lastColumn > firstColumn)
 			{
-				var headerCells = sheet.SelectedRange[1, firstColumn, 1, lastColumn - 1];
+				var headerCells = sheet.SelectedRange[2, firstColumn, 2, lastColumn - 1];
 				headerCells.Style.Font.Bold = true;
 				headerCells.Style.Fill.PatternType = ExcelFillStyle.Solid;
 				headerCells.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.Orange);
@@ -181,12 +181,14 @@ namespace BudgetCalculator
 				}
 				else
 				{
-					lastRow = excelWorksheet.Dimension.Rows;
+					var rows = excelWorksheet.Dimension.End.Row;
+					if (rows > lastRow)
+						lastRow = rows;
 				}
 
 				for (int i = 2; i <= lastRow; i++)
 				{
-					if (excelWorksheet.Cells[i, 1].Value.Equals(model.Category))
+					if (excelWorksheet.Cells[i, 1].Text.Equals(model.Category))
 					{
 						excelWorksheet.Cells[i, model.Column].Value = model.Amount;
 						newCategory = false;
@@ -202,11 +204,35 @@ namespace BudgetCalculator
 				}
 			}
 
+			SummaryHeader(package, models);
+
 			if (newFile)
 				package.SaveAs(new FileInfo(exportFile));
 			else
 				package.Save();
 		}
 
+		private static void SummaryHeader(ExcelPackage package, List<Model> models)
+		{
+			var listOfYears = models.Select(x => x.Year).Distinct();
+			foreach(var year in listOfYears)
+			{
+				var sheet = package.Workbook.Worksheets[year];
+				var columnEnds = configuration.Headers.Count + 1;
+				var lastRow = sheet.Dimension.End.Row;
+
+				sheet.Cells[1, 1].Value = "Summering";
+
+				for (int i = 2; i <= columnEnds; i++)
+				{
+					sheet.Cells[1, i].Formula = $"=SUM({sheet.Cells[3, i]}:{sheet.Cells[lastRow, i]})";
+				}
+
+				var headerCells = sheet.SelectedRange[1, 1, 1, columnEnds];
+				headerCells.Style.Font.Bold = true;
+				headerCells.Style.Fill.PatternType = ExcelFillStyle.Solid;
+				headerCells.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightBlue);
+			}
+		}
 	}
 }
