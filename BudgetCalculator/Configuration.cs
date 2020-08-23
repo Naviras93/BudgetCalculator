@@ -8,11 +8,12 @@ namespace BudgetCalculator
 {
 	public class Configuration
 	{
+		public bool IgnoreProfit { get; set; }
 		public int StartRow { get; set; }
 		public int ValueColumn { get; set; }
 		public int NameColumn { get; set; }
 		public int DateColumn { get; set; }
-		public int CoverYearsAhead { get; set; }
+		public int CoverYearsBehind { get; set; }
 		public List<string> Headers { get; set; }
 		public string ImportPathName { get; set; }
 		public List<string> ExcelFilesToRead { get; set; }

@@ -27,22 +27,20 @@ namespace BudgetCalculator
 			var package = new ExcelPackage();
 			
 			exportFile = configuration.ExportPathName + configuration.ExportFileName + ".xlsx";
-			var untilYear = DateTime.Now.Year + configuration.CoverYearsAhead;
+			var earliestYear = DateTime.Now.Year + configuration.CoverYearsBehind;
 			if (File.Exists(exportFile))
 			{
 				newFile = false;
 				package = new ExcelPackage(new FileInfo(exportFile));
-				if(int.Parse(package.Workbook.Worksheets.Last().Name) < untilYear)
+				if(int.Parse(package.Workbook.Worksheets.Last().Name) > earliestYear)
 				{
-					AddPages(package, untilYear);
+					AddPages(package, earliestYear);
 				}
-				//Check if the last page is the same or higher than last year value. If its not then add more pages.
 			}
 			else
 			{
 				newFile = true;
-				AddPages(package, untilYear);
-				// THIS IS WHERE THE HEADER IS MADE. Create duplicates for several years (from 2019 to 2050?)
+				AddPages(package, earliestYear);
 			}
 			List<Model> models = new List<Model>();
 			foreach (var excelFileSearch in configuration.ExcelFilesToRead)
@@ -115,6 +113,8 @@ namespace BudgetCalculator
 				value = worksheet.Cells[i, configuration.ValueColumn].Value?.ToString();
 				if (string.IsNullOrEmpty(value))
 					break;
+				if (configuration.IgnoreProfit && !value.StartsWith("-"))
+					continue;
 				var purchaseSourceName = worksheet.Cells[i, configuration.NameColumn].Value?.ToString();
 				string selectedName = "";
 				foreach(var c in configuration.ExportCategories)
