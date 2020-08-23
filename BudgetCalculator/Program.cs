@@ -88,7 +88,7 @@ namespace BudgetCalculator
 		{
 			int firstColumn = 2;
 			int lastColumn = firstColumn;
-			foreach (var header in configuration.Headers)
+			foreach (var header in configuration.MonthHeaders)
 			{
 				sheet.Cells[2, lastColumn].Value = header;
 				lastColumn++;
@@ -213,7 +213,7 @@ namespace BudgetCalculator
 			foreach(var year in listOfYears)
 			{
 				var sheet = package.Workbook.Worksheets[year];
-				var columnEnds = configuration.Headers.Count + 1;
+				var columnEnds = configuration.MonthHeaders.Count + 1;
 				var lastRow = sheet.Dimension.End.Row;
 
 				sheet.Cells[1, 1].Value = "Summering";
